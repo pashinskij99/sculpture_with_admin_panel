@@ -1,3 +1,3 @@
 <?php
 
-$connect = mysqli_connect('localhost', 'root', '', 'sculpture');
+$connect = mysqli_connect('localhost', 'root', '', 'sculpture') ;

@@ -2,15 +2,16 @@
 
     require_once 'admin/includes/connect.php';
 
-    $variables = mysqli_query($connect, 'SELECT * FROM `variables`');
+    $variables = mysqli_query($connect, "SELECT * FROM `variables`");
 
     $vars = [];
 
     while($var = mysqli_fetch_assoc($variables)) {
-        $vars[$var["Export"]] = $var['value'];
+        $vars[$var["Make a sculpture(true)"]] = $var['Value'];
     }
 
     var_dump($vars);
+
 ?>
 
 
