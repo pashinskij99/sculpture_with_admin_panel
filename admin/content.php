@@ -1,5 +1,4 @@
 <?php 
-
 session_start();
 
 $login = "admin";
@@ -11,7 +10,6 @@ if($login !== $_SESSION['login'] || $password !== $_SESSION['password']) {
 
 require_once 'includes/connect.php';
 $variables = mysqli_query($connect, "SELECT * FROM `variables`");
-
 ?>
 
 <!DOCTYPE html>
@@ -30,13 +28,13 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
             Menu
          </a>
          <div style="flex-grow: 0;" class="collapse navbar-collapse" id="navbarSupportedContent">
-            <a href="#includes/logout.php">Вернуться на сайт</a>
+            <a href="includes/logout.php">Вернуться на сайт</a>
          </div>
       </div>
    </nav>
    <main>
       <div class="container">
-          <form action="includes/add-variable.php" method="post">
+          <form action="includes/checkbox.php" method="post">
               <table class="table">
                   <thead class="thead-dark">
                   <tr>
@@ -57,7 +55,7 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
                           <td>'. $var["title"] .'</td>
                           <td>'. $var["value"] .' </td>
                           <td align="right">
-                             <input type="checkbox" class="checkbox" value="11" name="checked" id="">
+                             <input type="checkbox" class="checkbox" value='. $var["id"] .' name="all[]"  '. ( $var["checked"] != 1 ?: 'checked')  .' >
                           </td>
                         </tr>
                     ';
@@ -77,49 +75,39 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
           </form>
 
 
-          <h3 class="mt-4 mb-3">Добавить переменную</h3>
+<!--          <h3 class="mt-4 mb-3">Добавить переменную</h3>-->
 
-          <form action="includes/add-variable.php" method="post" class="row g-3">
-
-              <div class="col-md-6">
-                  <label for="var-title" class="form-label">Название переменной</label>
-                  <input type="text" name="title" class="form-control" id="var-title">
-              </div>
-
-              <div class="col-md-6">
-                  <label for="data-type" class="form-label">Тип значения</label>
-                  <select id="data-type" class="form-select">
-                      <option value="1" selected>Текст</option>
+<!--          <form action="includes/add-variable.php" method="post" class="row g-3">-->
+<!---->
+<!--              <div class="col-md-6">-->
+<!--                  <label for="var-title" class="form-label">Название переменной</label>-->
+<!--                  <input type="text" name="title" class="form-control" id="var-title">-->
+<!--              </div>-->
+<!---->
+<!--              <div class="col-md-6">-->
+<!--                  <label for="data-type" class="form-label">Тип значения</label>-->
+<!--                  <select id="data-type" class="form-select">-->
+<!--                      <option value="1" selected>Текст</option>-->
 <!--                      <option value="2"></option>-->
-                  </select>
-              </div>
-
-              <div class="col-md-12" id="text-form">
-                  <label for="text" class="form-label">Содержимое</label>
-                  <input type="text" name="value" class="form-control" id="text">
-              </div>
-
-              <div class="col-12">
-                  <button type="submit" class="btn btn-primary">Добавить</button>
-              </div>
-
-          </form>
+<!--                  </select>-->
+<!--              </div>-->
+<!---->
+<!--              <div class="col-md-12" id="text-form">-->
+<!--                  <label for="text" class="form-label">Содержимое</label>-->
+<!--                  <input type="text" name="value" class="form-control" id="text">-->
+<!--              </div>-->
+<!---->
+<!--              <div class="col-12">-->
+<!--                  <button type="submit" class="btn btn-primary">Добавить</button>-->
+<!--              </div>-->
+<!---->
+<!--          </form>-->
       </div>
    </main>
 
    <!-- JS Bundled Propper -->
    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-   <script>
-      // document.getElementById('data-type').addEventListener('change', (event) => {
-      //    if(event.target.value == 1) {
-      //       document.getElementById('text-form').classList.remove('d-none')
-      //       document.getElementById('image-form').classList.add('d-none')
-      //    } else {
-      //       document.getElementById('text-form').classList.add('d-none')
-      //       document.getElementById('image-form').classList.remove('d-none')
-      //    }
-      // })
-   </script>
+<!--   <script src="../js/temp/app.js"></script>-->
 </body>
 </html>
 

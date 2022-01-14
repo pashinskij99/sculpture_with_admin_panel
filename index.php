@@ -4,16 +4,19 @@
 
     $variables = mysqli_query($connect, "SELECT * FROM `variables`");
 
+    $CITY = 'Ivanovo';
+
     $vars = [];
 
     while($var = mysqli_fetch_assoc($variables)) {
-        $vars[$var["Make a sculpture(true)"]] = $var['Value'];
+        $vars[$var["title"]] = $var['value'];
     }
 
-    var_dump($vars);
+//    require_once 'admin/includes/checkbox.php';
+
+//    echo print_r( $checkbox );
 
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -40,7 +43,6 @@
 </head>
 <body>
 <div class="container-loader">
-
     <a href="" id="downloadAnchorElem"> </a>
     <div class="triangles">
         <div class="tri invert"></div>
@@ -59,7 +61,13 @@
 </div>
 <div id="back">
 </div>
-<!--<script src="js/temp/material.js"></script>-->
+<script
+        src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+        crossorigin="anonymous"></script>
+<script>
+  //var TOWN =
+</script>
 <script src="js/temp/app.js"></script>
 </body>
 </html>

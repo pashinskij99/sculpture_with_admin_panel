@@ -1,16 +1,37 @@
+$(document).ready(function () {
+     init()
+    // App.rebuildSkyBox.add();
+})
+
+function init() {
+    $.post("././admin/includes/core.php",
+        {
+            "action" : "init"
+        },
+        showGoods
+    );
+}
+
+function showGoods(data) {
+    data = JSON.parse(data)
+    window.globalVal = {
+        size: null,
+        points: false,
+        oldPoints: false,
+        lastMaterial: null,
+        vg: null,
+        lastMesh: null,
+        renderObj: null,
+        guiMenuIsCreate: null,
+        isTimeGenerate: false,
+        db: null
+    }
+    window.globalVal.db = data
+    new Apps()
+}
+
 const Vector3 = THREE.Vector3
 const Curve = THREE.Curve
-const globalVal = {
-    size: null,
-    points: false,
-    oldPoints: false,
-    lastMaterial: null,
-    vg: null,
-    lastMesh: null,
-    renderObj: null,
-    guiMenuIsCreate: null,
-    isTimeGenerate: false,
-}
 
 function CubicPoly() {
     let c0 = 0,
@@ -195,7 +216,6 @@ CatmullRomCurve3.prototype.isCatmullRomCurve3 = true
 
 var Apps = function () {
     var container, stats
-
     var camera, scene, renderer
     var group
 
@@ -292,13 +312,13 @@ var Apps = function () {
             const splinePointB = spline.points[spline.points.length - 1]
 
             let preLineA = new THREE.TubeGeometry(preLinePoints, 300, rad, 30) //this.postPoints
-            console.log(preLineA);
-            preLineA = this.translateGrometry(preLineA, splinePointA)
+            // console.log(preLineA);
+            // preLineA = this.translateGrometry(preLineA, splinePointA)
             // let spherePatchA = new THREE.SphereGeometry(rad, 10, 10)
             // spherePatchA = this.translateGrometry(spherePatchA, splinePointA)
             let preLineB = new THREE.TubeGeometry(endLinePoints, 300, rad, 30) //this.postPoints
-            preLineB = this.translateGrometry(preLineB, splinePointB)
-            // let spherePatchB = new THREE.SphereGeometry(rad, 10, 10)
+            // preLineB = this.translateGrometry(preLineB, splinePointB)
+            let spherePatchB = new THREE.SphereGeometry(rad, 10, 10)
             // spherePatchB = this.translateGrometry(spherePatchB, splinePointB)
             tubeGeometry.merge(preLineA)
             tubeGeometry.merge(preLineB)
@@ -392,13 +412,13 @@ var Apps = function () {
             let nextNormal = currentNormal.clone();
             let currentDistance = distance;
 
-            const minDistance = distance * 0.2;
+            const minDistance = distance * 0.1;
             const distanceRange = distance - minDistance;
             const getDistance = ( alpha ) => {
-                return minDistance // + ( distanceRange * alpha );
+               return minDistance + ( distanceRange * alpha ) ;
             };
 
-            const steps = 9;
+            const steps = 4;
 
             const points = [];
 
@@ -408,7 +428,7 @@ var Apps = function () {
                 nextAttractor.negate();
 
                 const nextCurvePover = nextAttractor.distanceTo( nextNormal );
-                nextNormal = nextNormal.lerp( nextAttractor, 0.4 * nextCurvePover);
+                nextNormal = nextNormal.lerp( nextAttractor, 0.1 * nextCurvePover);
                 currentDistance = Math.min( getDistance( nextCurvePover ), currentPoint.length() );
                 const nextAddon = nextNormal.clone().multiplyScalar( currentDistance );
                 currentPoint.add( nextAddon );
@@ -749,108 +769,138 @@ var Apps = function () {
         if (guiMenuIsCreate) {
             guiMenuIsCreate.destroy()
         }
+
+        const currentDB = globalVal.db
+
         const guiMenu = new dat.GUI({ width: 280 })
         if (isTimeGenerate) {
-            interval = setInterval(() => {
-                globalVal.oldPoints = false
-                generateCurve()
-            }, (lastTime = 5000))
-            const btnTimerMakeSculpture = guiMenu
-                .add(renderObj, 'radiousTimer')
-                .min(5)
-                .max(30)
-                .step(1)
-                .name('Time')
-                .onChange((val) => {
+            if(currentDB[0].checked === "0") {
+                interval = setInterval(() => {
                     globalVal.oldPoints = false
-                    const newVal = val + '000',
-                        changeTypeVal = Number(newVal)
-                    clearInterval(interval)
-                    interval = setInterval(() => {
+                    generateCurve()
+                }, (lastTime = 5000))
+                const btnTimerMakeSculpture = guiMenu
+                    .add(renderObj, 'radiousTimer')
+                    .min(5)
+                    .max(30)
+                    .step(1)
+                    .name('Time')
+                    .onChange((val) => {
                         globalVal.oldPoints = false
-                        generateCurve()
-                    }, changeTypeVal)
-                })
+                        const newVal = val + '000',
+                            changeTypeVal = Number(newVal)
+                        clearInterval(interval)
+                        interval = setInterval(() => {
+                            globalVal.oldPoints = false
+                            generateCurve()
+                        }, changeTypeVal)
+                    })
+            }
+
         } else if (!isTimeGenerate) {
-            const btnMakeSculpture = guiMenu
-                .add(renderObj, 'genereateCounts')
-                .name('Make a sculpture')
-            clearInterval(interval)
+            if(currentDB[0].checked === "0") {
+                const btnMakeSculpture = guiMenu
+                    .add(renderObj, 'genereateCounts')
+                    .name('Make a sculpture')
+                clearInterval(interval)
+            }
         }
-        guiMenu.add(renderObj, 'exportStl').name('Export')
-        guiMenu
-            .add(renderObj, 'radiousSize')
-            .min(1)
-            .max(10)
-            .name('Size')
-            .onChange((val) => {
-                globalVal.size = val
-                globalVal.oldPoints = true
-                generateCurve()
-            })
-        guiMenu
-            .add(renderObj, 'firstSize')
-            .name('4.24')
-            .onChange((val) => {
-                globalVal.size = 4.2
-                globalVal.oldPoints = true
-                generateCurve()
-            })
-        guiMenu
-            .add(renderObj, 'secondSize')
-            .name('4.83')
-            .onChange((val) => {
-                globalVal.size = 4.8
-                globalVal.oldPoints = true
-                generateCurve()
-            })
-        guiMenu
-            .add(renderObj, 'thirdSize')
-            .name('6.30')
-            .onChange((val) => {
-                globalVal.size = 6.0
-                globalVal.oldPoints = true
-                generateCurve()
-            })
-        guiMenu
-            .add(renderObj, 'changeBack', ['plastic', 'metal'])
-            .name('Change Texture')
-            .onChange(function (val) {
-                globalVal.lastMaterial = val
-                changeTexture(val)
-            })
-        guiMenu
-            .add(renderObj, 'changeBack', ['Room I', 'Room II', 'Room III'])
-            .name('Change Background')
-            .onChange(function (val) {
-                document.getElementById('main').removeChild(lastFon)
-                var curI
-                switch (val) {
-                    case 'Room I':
-                        curI = fon[0]
-                        break
-                    case 'Room II':
-                        curI = fon[1]
-                        break
-                    case 'Room III':
-                        curI = fon[2]
-                        break
-                }
-                lastFon = curI
-                document.getElementById('main').appendChild(curI)
-            })
-        guiMenu
-            .add(renderObj, 'isTimeGenerate')
-            .name('GENERATE TYPE' + ' generate')
-            .onChange(() => {
-                globalVal.guiMenuIsCreate = guiMenu
-                globalVal.isTimeGenerate = !globalVal.isTimeGenerate
-                createGuiMenu(
-                    globalVal.isTimeGenerate,
-                    globalVal.renderObj,
-                    globalVal.guiMenuIsCreate
-                )
-            })
+        if(currentDB[1].checked === "0") {
+            guiMenu.add(renderObj, 'exportStl').name('Export')
+        }
+        if(currentDB[2].checked === "0") {
+            guiMenu
+                .add(renderObj, 'radiousSize')
+                .min(1)
+                .max(10)
+                .name('Size')
+                .onChange((val) => {
+                    globalVal.size = val
+                    globalVal.oldPoints = true
+                    generateCurve()
+                })
+        }
+        if(currentDB[3].checked === "0") {
+            guiMenu
+                .add(renderObj, 'firstSize')
+                .name('4.24')
+                .onChange((val) => {
+                    globalVal.size = 4.2
+                    globalVal.oldPoints = true
+                    generateCurve()
+                })
+
+        }
+        if(currentDB[4].checked === "0") {
+            guiMenu
+                .add(renderObj, 'secondSize')
+                .name('4.83')
+                .onChange((val) => {
+                    globalVal.size = 4.8
+                    globalVal.oldPoints = true
+                    generateCurve()
+                })
+        }
+
+        if(currentDB[5].checked === "0") {
+            guiMenu
+                .add(renderObj, 'thirdSize')
+                .name('6.30')
+                .onChange((val) => {
+                    globalVal.size = 6.0
+                    globalVal.oldPoints = true
+                    generateCurve()
+                })
+        }
+
+        if(currentDB[6].checked === "0") {
+
+            guiMenu
+                .add(renderObj, 'changeBack', ['plastic', 'metal'])
+                .name('Change Texture')
+                .onChange(function (val) {
+                    globalVal.lastMaterial = val
+                    changeTexture(val)
+                })
+
+        }
+
+        if(currentDB[7].checked === "0") {
+            guiMenu
+                .add(renderObj, 'changeBack', ['Room I', 'Room II', 'Room III'])
+                .name('Change Background')
+                .onChange(function (val) {
+                    document.getElementById('main').removeChild(lastFon)
+                    var curI
+                    switch (val) {
+                        case 'Room I':
+                            curI = fon[0]
+                            break
+                        case 'Room II':
+                            curI = fon[1]
+                            break
+                        case 'Room III':
+                            curI = fon[2]
+                            break
+                    }
+                    lastFon = curI
+                    document.getElementById('main').appendChild(curI)
+                })
+        }
+        if(currentDB[8].checked === "0") {
+            guiMenu
+                .add(renderObj, 'isTimeGenerate')
+                .name('GENERATE TYPE' + ' generate')
+                .onChange(() => {
+                    globalVal.guiMenuIsCreate = guiMenu
+                    globalVal.isTimeGenerate = !globalVal.isTimeGenerate
+                    createGuiMenu(
+                        globalVal.isTimeGenerate,
+                        globalVal.renderObj,
+                        globalVal.guiMenuIsCreate
+                    )
+                })
+        }
 
         globalVal.guiMenuIsCreate = guiMenu
     }
@@ -1374,7 +1424,4 @@ var Apps = function () {
       }//add background
       };//settings for background*/
 }
-$(document).ready(function () {
-    new Apps()
-    // App.rebuildSkyBox.add();
-})
+
