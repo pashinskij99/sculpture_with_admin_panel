@@ -307,21 +307,16 @@ var Apps = function () {
             return geometry
         }
 
-        patchGeometry(rad, spline, tubeGeometry, preLinePoints, endLinePoints) {
-            const splinePointA = spline.points[0]
-            const splinePointB = spline.points[spline.points.length - 1]
-
-            let preLineA = new THREE.TubeGeometry(preLinePoints, 300, rad, 30) //this.postPoints
-            // console.log(preLineA);
-            // preLineA = this.translateGrometry(preLineA, splinePointA)
-            // let spherePatchA = new THREE.SphereGeometry(rad, 10, 10)
-            // spherePatchA = this.translateGrometry(spherePatchA, splinePointA)
-            let preLineB = new THREE.TubeGeometry(endLinePoints, 300, rad, 30) //this.postPoints
-            // preLineB = this.translateGrometry(preLineB, splinePointB)
+        patchGeometry(rad, tubeGeometry, points) {
+            const splinePointA = points.points[0]
+            const splinePointB = points.points[points.points.length - 1]
+            let spherePatchA = new THREE.SphereGeometry(rad, 10, 10)
+            spherePatchA = this.translateGrometry(spherePatchA, splinePointA)
+            tubeGeometry.merge(spherePatchA)
             let spherePatchB = new THREE.SphereGeometry(rad, 10, 10)
-            // spherePatchB = this.translateGrometry(spherePatchB, splinePointB)
-            tubeGeometry.merge(preLineA)
-            tubeGeometry.merge(preLineB)
+            spherePatchB = this.translateGrometry(spherePatchB, splinePointB)
+            tubeGeometry.merge(spherePatchB)
+
             return tubeGeometry
         }
 
@@ -329,16 +324,11 @@ var Apps = function () {
             globalVal.points =
                 globalVal.points && globalVal.oldPoints
                     ? globalVal.points
-                    : this.nextCurve.getPoints(200)
-            let pointsForStart = this.preCurve.getPoints(200)
-            let pointsForEnd = this.endCurve.getPoints(200)
-
-            const spline = new THREE.SplineCurve3(globalVal.points)
-            const spline2 = new THREE.SplineCurve3(pointsForStart)
-            const spline3 = new THREE.SplineCurve3(pointsForEnd)
+                    : this.nextCurve
             const rad = globalVal.size ? globalVal.size : 3
-            var nextGeometry = new THREE.TubeGeometry(spline, 300, rad, 30)
-            nextGeometry = this.patchGeometry(rad, spline, nextGeometry, spline2, spline3)
+            let nextGeometry = new THREE.TubeGeometry( globalVal.points, 256, rad, 16)
+            // console.log(this.nextCurve.points.length - 1)
+            nextGeometry = this.patchGeometry(rad, nextGeometry, globalVal.points )
             return nextGeometry
         }
 
@@ -441,57 +431,100 @@ var Apps = function () {
         generateCurve() {
             const points = [];
 
-            const startSegment = [
-                this.points[ 1 ].clone(),
-                this.points[ 0 ].clone()
-            ];
-
-            const endSegment = [
-                this.points[ this.points.length - 2 ].clone(),
-                this.points[ this.points.length - 1 ].clone()
-            ];
-
-            const prePoints = this.getToCenterPositions( startSegment );
-            const postPoints = this.getToCenterPositions( endSegment );
-
-            this.pointsForStartTube = []
-            this.pointsForLastTube = []
-
-            for( const nextPrePoint of prePoints ){
-                this.pointsForStartTube.push( nextPrePoint );
-            }
-
-            for( const nextPostPoint of postPoints ){
-                this.pointsForLastTube.push( nextPostPoint );
-            }
-
             for (const nextPoint of this.points) {
                 points.push(
                     new THREE.Vector3(nextPoint.x, nextPoint.y, nextPoint.z)
                 )
             }
 
-            const nextCurve = new CatmullRomCurve3(
+            points.push(
+                new THREE.Vector3(0, 0, 0)
+            )
+
+            points.unshift(
+                new THREE.Vector3(0, 0, 0)
+            )
+
+            console.log({
+                points
+            })
+
+            let nextCurve = new CatmullRomCurve3(
                 points,
                 false,
                 'catmullrom',
-                0.7
+                0.9
             ) // 1 круглые  // 0.7 более ровные
 
-            const preCurve = new CatmullRomCurve3(
-                this.pointsForStartTube,
-                false,
-            )
+            // points.pop()
 
-            const endCurve = new CatmullRomCurve3(
-                this.pointsForLastTube,
-                false,
-            )
+            const halfPathPoints = nextCurve.getPoints( 50 );
+            // console.log( {
+            //    halfPathPoints
+            // } );
 
-            // return nextCurve // , preCurve, endCurve
+            // const startSegment = [
+            //    this.points[ 1 ].clone(),
+            //    this.points[ 0 ].clone()
+            // ];
+            //
+            // const endSegment = [
+            //    this.points[ this.points.length - 2 ].clone(),
+            //    this.points[ this.points.length - 1 ].clone()
+            // ];
+            //
+            const startSegment = [
+                halfPathPoints[ 1 ].clone(),
+                halfPathPoints[ 0 ].clone()
+            ];
+
+            const endSegment = [
+                halfPathPoints[ halfPathPoints.length - 2 ].clone(),
+                halfPathPoints[ halfPathPoints.length - 1 ].clone()
+            ];
+
+            // const prePoints = this.getToCenterPositions( startSegment );
+            // const postPoints = this.getToCenterPositions( endSegment );
+
+            this.pointsForStartTube = []
+            this.pointsForLastTube = []
+
+            // for( const nextPrePoint of prePoints ){
+            //    halfPathPoints.unshift( nextPrePoint );
+            //    // this.pointsForStartTube.push( nextPrePoint );
+            // }
+            //
+            // for( const nextPostPoint of postPoints ){
+            //    halfPathPoints.push( nextPostPoint );
+            //    // this.pointsForLastTube.push( nextPostPoint );
+            // }
+
+            nextCurve = new CatmullRomCurve3(
+                halfPathPoints,
+                false,
+            ) // 1 круглые  // 0.7 более ровные
+
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+            halfPathPoints.pop()
+
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+            halfPathPoints.shift()
+
             this.nextCurve = nextCurve
-            this.preCurve = preCurve
-            this.endCurve = endCurve
         }
 
         generateNurbsKnotsByPoints() {
