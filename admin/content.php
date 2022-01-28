@@ -1,17 +1,70 @@
-<?php 
+<?php
 session_start();
 
 $login = "admin";
 $password = "12345";
 
-if($login !== $_SESSION['login'] || $password !== $_SESSION['password']) {
-   header('Location: /sculpture(pash)/admin');
+if(isset($login) !== isset($_SESSION['login']) || isset($password) !== isset($_SESSION['password'])) {
+    header('Location: /sculpture(pash)/admin');
 }
 
 require_once 'includes/connect.php';
 $variables = mysqli_query($connect, "SELECT * FROM `variables`");
-?>
+$tableSelectForTypeGenerate = mysqli_query($connect, "SELECT `id`, `type` FROM `selecttypegenerate` WHERE 1");
+$tableSelectForBackground = mysqli_query($connect, "SELECT `id`, `background` FROM `selectbackground` WHERE 1");
+$tableSelectForTexture = mysqli_query($connect, "SELECT `id`, `texture` FROM `selecttexture` WHERE 1");
+$tableInputSize = mysqli_query($connect, "SELECT `id`, `size` FROM `inputsize` WHERE 1");
+$tableInputTime = mysqli_query($connect, "SELECT `id`, `time` FROM `inputtime` WHERE 1");
 
+while ($var = mysqli_fetch_array($tableSelectForTypeGenerate)) {
+    $stateForTypeGenerateDefault = $var['type'] === 'default' ? 'selected' : null;
+    $stateForTypeGenerateTime = $var['type'] === 'time' ? 'selected' : null;
+}
+while ($var = mysqli_fetch_array($tableSelectForBackground)) {
+    $stateForBackgroundRoom1 = $var['background'] === 'Room I' ? 'selected' : null;
+    $stateForBackgroundRoom2 = $var['background'] === 'Room II' ? 'selected' : null;
+    $stateForBackgroundRoom3 = $var['background'] === 'Room III' ? 'selected' : null;
+}
+while ($var = mysqli_fetch_array($tableSelectForTexture)) {
+    $stateForPlastic = $var['texture'] === 'plastic' ? 'selected' : null;
+    $stateForMetal = $var['texture'] === 'metal' ? 'selected' : null;
+}
+while ($var = mysqli_fetch_array($tableInputSize)) {
+    $valueSize = $var['size'];
+}
+while ($var = mysqli_fetch_array($tableInputTime)) {
+    $valueTime = $var['time'];
+}
+
+$selectTexture = '
+    <select name="texture[]" id="texture">
+      <option '. $stateForPlastic .' value="plastic">Plastic</option>
+      <option '. $stateForMetal .' value="metal">Metal</option>
+    </select>
+';
+$selectBackground = '
+    <select name="background[]" id="background">
+      <option '. $stateForBackgroundRoom1 .' value="Room I">Room I</option>
+      <option '. $stateForBackgroundRoom2 .' value="Room II">Room II</option>
+      <option '. $stateForBackgroundRoom3 .' value="Room III">Room III</option>
+    </select>
+';
+$sizeInputTypeNumber = '
+    <input type="number" id="size" name="size" value='. $valueSize .'
+       min="1" max="10">
+';
+$timeInputTypeNumber = '
+    <input type="number" id="time" name="time" value='. $valueTime .'
+       min="8" max="30">
+';
+$selectTypeGenerate = '
+    <select name="typeGenerate[]" id="typeGenerate">
+      <option '. $stateForTypeGenerateDefault .' value="default">Default</option>
+      <option '. $stateForTypeGenerateTime .' value="time">Time</option>
+    </select>
+';
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,7 +72,7 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
    <meta http-equiv="X-UA-Compatible" content="IE=edge">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Document</title>
-   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
 </head>
 <body>
    <nav class="navbar navbar-expand-lg navbar-dark bg-dark d-flex justify-content-between">
@@ -39,9 +92,10 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
                   <thead class="thead-dark">
                   <tr>
                       <th scope="col">#</th>
-                      <th scope="col">Название</th>
-                      <th scope="col">Значение</th>
-                      <th scope="col"></th>
+                      <th scope="col">Name</th>
+<!--                      <th scope="col">Null</th>-->
+                      <th scope="col">Value</th>
+<!--                      <th scope="col"></th>-->
                   </tr>
                   </thead>
                   <tbody>
@@ -53,7 +107,14 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
                         <tr>
                           <th scope="row">' . $var["id"] . '</th>
                           <td>'. $var["title"] .'</td>
-                          <td>'. $var["value"] .' </td>
+                          <td>
+                            '. ( $var["title"] != 'ChangeTexture' ?"": $selectTexture) .'
+                            '. ( $var["title"] != 'ChangeBackground' ?"": $selectBackground) .'
+                            '. ( $var["title"] != 'MakeASculpture' ?"": $timeInputTypeNumber) .'
+                            '. ( $var["title"] != 'Size' ?"": $sizeInputTypeNumber) .'
+                          </td>
+                          <td>'. ( $var["title"] != 'MakeASculpture' ?"": $selectTypeGenerate) .'</td>
+
                           <td align="right">
                              <input type="checkbox" class="checkbox" value='. $var["id"] .' name="all[]"  '. ( $var["checked"] != 1 ?: 'checked')  .' >
                           </td>
@@ -73,41 +134,9 @@ $variables = mysqli_query($connect, "SELECT * FROM `variables`");
                         margin-left: auto;
                       ">Скрыть</button>
           </form>
-
-
-<!--          <h3 class="mt-4 mb-3">Добавить переменную</h3>-->
-
-<!--          <form action="includes/add-variable.php" method="post" class="row g-3">-->
-<!---->
-<!--              <div class="col-md-6">-->
-<!--                  <label for="var-title" class="form-label">Название переменной</label>-->
-<!--                  <input type="text" name="title" class="form-control" id="var-title">-->
-<!--              </div>-->
-<!---->
-<!--              <div class="col-md-6">-->
-<!--                  <label for="data-type" class="form-label">Тип значения</label>-->
-<!--                  <select id="data-type" class="form-select">-->
-<!--                      <option value="1" selected>Текст</option>-->
-<!--                      <option value="2"></option>-->
-<!--                  </select>-->
-<!--              </div>-->
-<!---->
-<!--              <div class="col-md-12" id="text-form">-->
-<!--                  <label for="text" class="form-label">Содержимое</label>-->
-<!--                  <input type="text" name="value" class="form-control" id="text">-->
-<!--              </div>-->
-<!---->
-<!--              <div class="col-12">-->
-<!--                  <button type="submit" class="btn btn-primary">Добавить</button>-->
-<!--              </div>-->
-<!---->
-<!--          </form>-->
       </div>
    </main>
-
-   <!-- JS Bundled Propper -->
    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-<!--   <script src="../js/temp/app.js"></script>-->
 </body>
 </html>
 

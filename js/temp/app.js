@@ -14,17 +14,21 @@ function init() {
 
 function showGoods(data) {
     data = JSON.parse(data)
+    // console.log(data)
     window.globalVal = {
         size: null,
         points: false,
         oldPoints: false,
-        lastMaterial: null,
+        lastMaterial: 'plastic',
         vg: null,
+        vg_normal: null,
         lastMesh: null,
         renderObj: null,
         guiMenuIsCreate: null,
         isTimeGenerate: false,
-        db: null
+        db: null,
+        backgrounds: [],
+        parametersForPlane: null
     }
     window.globalVal.db = data
     new Apps()
@@ -217,7 +221,7 @@ CatmullRomCurve3.prototype.isCatmullRomCurve3 = true
 var Apps = function () {
     var container, stats
     var camera, scene, renderer
-    var group
+    var group, planeMesh, planeGeometry, planeMaterial
 
     var targetRotation = 5.2
     var targetRotationOnMouseDown = 0
@@ -232,14 +236,14 @@ var Apps = function () {
     const plastic = THREE.ImageUtils.loadTexture('img/plastic.jpg', false)
     var controls,
         translBlock = 'back',
-        dftMaterial = new THREE.MeshPhongMaterial({
-            side: THREE.DoubleSide,
-            shading: THREE.SmoothShading,
-            opacity: 1,
-            map: plastic,
-            emissive: 0x8f8f8f,
-            color: 0xffffff,
-        }),
+        // dftMaterial = new THREE.MeshPhongMaterial({
+        //     side: THREE.DoubleSide,
+        //     shading: THREE.SmoothShading,
+        //     opacity: 1,
+        //     map: plastic,
+        //     emissive: 0x8f8f8f,
+        //     color: 0xffffff,
+        // }),
         varlastMater,
         lastMater,
         texture1,
@@ -285,14 +289,20 @@ var Apps = function () {
                 }
                 // 7
                 this.points = this.generatePoints(5)
-                // this.nurbsKnot = this.generateNurbsKnotsByPoints()
                 this.curve = this.generateCurve()
                 this.mesh = this.getMesh()
+
                 this.size = globalVal.size
 
-                // console.log(nextCurve);
+                this.mesh.meshForShadow.scale.set(0.3, 0.3, 0.3)
+                this.obj.add(this.mesh.mesh, this.mesh.meshForShadow)
+                console.log(this.obj)
+                // console.log(this.mesh.mesh.material)
 
-                this.obj.add(this.mesh)
+                this.mesh.meshForShadow.castShadow = true
+                // this.mesh.mesh.receiveShadow = true
+
+                // this.obj.add(this.mesh)
 
                 this.generateSegmentsLength()
             } catch {}
@@ -333,37 +343,71 @@ var Apps = function () {
         }
 
         getMaterial() {
+            // console.log(globalVal.vg, texture1)
             switch (globalVal.lastMaterial) {
                 case 'metal':
-                    return new THREE.MeshPhongMaterial({
-                        shininess: 30,
-                        shading: THREE.SmoothShading,
-                        vertexColors: false,
-                        blending: THREE.AdditiveBlending,
-                        map: globalVal.vg,
-                        reflectivity: 0.05,
-                        bumpMap: texture1,
-                        bumpScale: 8.92,
-                        side: THREE.DoubleSide,
-                    })
+                    return {
+                        material: new THREE.MeshStandardMaterial({
+                            shininess: 30,
+                            shading: THREE.SmoothShading,
+                            // vertexColors: false,
+                            map: globalVal.vg,
+                            reflectivity: 0.05,
+                            // normalMap: globalVal.vg_normal,
+                            // normalScale: new THREE.Vector2( 1, 1 ),
+                            bumpMap: globalVal.vg,
+                            bumpScale: 8.92,
+                            side: THREE.FrontSide,
+                            name: 'Metal',
+                        }),
+                        materialForShadowMesh: new THREE.MeshPhongMaterial({
+                            shininess: 0,
+                            shading: THREE.SmoothShading,
+                            vertexColors: false,
+                            blending: THREE.AdditiveBlending,
+                            map: globalVal.vg,
+                            reflectivity: 0.05,
+                            bumpMap: texture1,
+                            bumpScale: 8.92,
+                            side: THREE.FrontSide,
+                            transparent: true,
+                            opacity: 0,
+                            name: 'ForShadow'
+                        })
+                    }
                     break
-                default:
-                    return new THREE.MeshPhongMaterial({
-                        side: THREE.DoubleSide,
-                        shading: THREE.SmoothShading,
-                        opacity: 1,
-                        map: plastic,
-                        emissive: 0x8f8f8f,
-                        color: 0xffffff,
-                    })
+                case 'plastic' :
+                    return {
+                        material: new THREE.MeshStandardMaterial({
+                            side: THREE.FrontSide,
+                            shading: THREE.SmoothShading,
+                            opacity: 1,
+                            map: plastic,
+                            emissive: 0x8f8f8f,
+                            color: 0xffffff,
+                        }),
+                        materialForShadowMesh: new THREE.MeshPhongMaterial({
+                            side: THREE.FrontSide,
+                            shading: THREE.SmoothShading,
+                            map: plastic,
+                            emissive: 0x8f8f8f,
+                            color: 0xffffff,
+                            transparent: true,
+                            opacity: 0
+                        })
+                    }
             }
         }
         getMesh() {
             this.geometry = this.getGeometry()
             this.material = this.getMaterial()
-            this.mesh = new THREE.Mesh(this.geometry, this.material)
+            this.mesh = new THREE.Mesh(this.geometry, this.material.material)
+            this.meshForShadow = new THREE.Mesh(this.geometry, this.material.materialForShadowMesh)
             globalVal.lastMesh = this.mesh
-            return this.mesh
+            return {
+                mesh: this.mesh,
+                meshForShadow: this.meshForShadow
+            }
         }
 
         meshTestPoints() {
@@ -445,10 +489,6 @@ var Apps = function () {
                 new THREE.Vector3(0, 0, 0)
             )
 
-            console.log({
-                points
-            })
-
             let nextCurve = new CatmullRomCurve3(
                 points,
                 false,
@@ -456,23 +496,8 @@ var Apps = function () {
                 0.9
             ) // 1 круглые  // 0.7 более ровные
 
-            // points.pop()
-
             const halfPathPoints = nextCurve.getPoints( 50 );
-            // console.log( {
-            //    halfPathPoints
-            // } );
 
-            // const startSegment = [
-            //    this.points[ 1 ].clone(),
-            //    this.points[ 0 ].clone()
-            // ];
-            //
-            // const endSegment = [
-            //    this.points[ this.points.length - 2 ].clone(),
-            //    this.points[ this.points.length - 1 ].clone()
-            // ];
-            //
             const startSegment = [
                 halfPathPoints[ 1 ].clone(),
                 halfPathPoints[ 0 ].clone()
@@ -483,21 +508,8 @@ var Apps = function () {
                 halfPathPoints[ halfPathPoints.length - 1 ].clone()
             ];
 
-            // const prePoints = this.getToCenterPositions( startSegment );
-            // const postPoints = this.getToCenterPositions( endSegment );
-
             this.pointsForStartTube = []
             this.pointsForLastTube = []
-
-            // for( const nextPrePoint of prePoints ){
-            //    halfPathPoints.unshift( nextPrePoint );
-            //    // this.pointsForStartTube.push( nextPrePoint );
-            // }
-            //
-            // for( const nextPostPoint of postPoints ){
-            //    halfPathPoints.push( nextPostPoint );
-            //    // this.pointsForLastTube.push( nextPostPoint );
-            // }
 
             nextCurve = new CatmullRomCurve3(
                 halfPathPoints,
@@ -752,6 +764,21 @@ var Apps = function () {
         }
     }
 
+    const test_normal = THREE.ImageUtils.loadTexture(
+
+        'img/metal1.jpg',
+        false,
+        (vg_normal) => {
+
+            globalVal.vg_normal = vg_normal;
+            vg_normal.wrapS = vg_normal.wrapT = THREE.ClampToEdgeWrapping
+            vg_normal.format = THREE.RGBFormat
+            vg_normal.repeat.set(0.182, 0.182)
+            vg_normal.offset.set(0.14, 0.14)
+            vg_normal.needsUpdate = true;
+        }
+    );
+
     const text = THREE.ImageUtils.loadTexture(
         'img/metal1.jpg',
         false,
@@ -763,17 +790,19 @@ var Apps = function () {
             texture1.repeat.set(0.82, 0.82)
             texture1.offset.set(0.14, 0.14)
 
-            metal = new THREE.MeshPhongMaterial({
-                shininess: 30,
-                shading: THREE.SmoothShading,
-                vertexColors: false,
-                blending: THREE.AdditiveBlending,
-                map: vg,
-                reflectivity: 0.05,
-                bumpMap: texture1,
-                bumpScale: 8.92,
-                side: THREE.DoubleSide,
-            })
+            // metal = new THREE.MeshPhongMaterial({
+            //     shininess: 30,
+            //     shading: THREE.SmoothShading,
+            //     vertexColors: false,
+            //     blending: THREE.AdditiveBlending,
+            //     map: vg,
+            //     reflectivity: 0.05,
+            //     bumpMap: texture1,
+            //     bumpScale: 8.92,
+            //     side: THREE.DoubleSide,
+            //     // transparent: true,
+            //     // opacity: 1111
+            // })
 
             fon[0] = new Image()
             fon[0].src = 'img/FON_1.jpg'
@@ -785,7 +814,7 @@ var Apps = function () {
                     fon[2].src = 'img/FON_3.jpg'
                     fon[2].onload = function () {
                         lastFon = fon[0]
-                        document.getElementById('main').appendChild(lastFon)
+                        // document.getElementById('main').appendChild(lastFon)
                         init()
                         animate()
                         guiObj.init()
@@ -806,15 +835,16 @@ var Apps = function () {
         const currentDB = globalVal.db
 
         const guiMenu = new dat.GUI({ width: 280 })
-        if (isTimeGenerate) {
-            if(currentDB[0].checked === "0") {
+        if (!isTimeGenerate && currentDB[0].checked === "1") {
+            // if(currentDB[0].checked === "1") {
+                clearInterval(interval)
                 interval = setInterval(() => {
                     globalVal.oldPoints = false
                     generateCurve()
-                }, (lastTime = 5000))
+                }, (lastTime = 8000))
                 const btnTimerMakeSculpture = guiMenu
                     .add(renderObj, 'radiousTimer')
-                    .min(5)
+                    .min(8)
                     .max(30)
                     .step(1)
                     .name('Time')
@@ -828,15 +858,15 @@ var Apps = function () {
                             generateCurve()
                         }, changeTypeVal)
                     })
-            }
+            // }
 
-        } else if (!isTimeGenerate) {
-            if(currentDB[0].checked === "0") {
+        } else if (isTimeGenerate || currentDB[0].checked === "0") {
+            // if(currentDB[0].checked === "0") {
                 const btnMakeSculpture = guiMenu
                     .add(renderObj, 'genereateCounts')
                     .name('Make a sculpture')
                 clearInterval(interval)
-            }
+            // }
         }
         if(currentDB[1].checked === "0") {
             guiMenu.add(renderObj, 'exportStl').name('Export')
@@ -893,7 +923,9 @@ var Apps = function () {
                 .name('Change Texture')
                 .onChange(function (val) {
                     globalVal.lastMaterial = val
-                    changeTexture(val)
+                    console.log(globalVal.lastMaterial)
+                    globalVal.oldPoints = true
+                    generateCurve()
                 })
 
         }
@@ -903,21 +935,33 @@ var Apps = function () {
                 .add(renderObj, 'changeBack', ['Room I', 'Room II', 'Room III'])
                 .name('Change Background')
                 .onChange(function (val) {
-                    document.getElementById('main').removeChild(lastFon)
-                    var curI
                     switch (val) {
                         case 'Room I':
-                            curI = fon[0]
-                            break
+                            createBackground(globalVal.backgrounds[0], scene, globalVal.parametersForPlane)
+                        break;
                         case 'Room II':
-                            curI = fon[1]
-                            break
+                            createBackground(globalVal.backgrounds[1], scene, globalVal.parametersForPlane)
+                        break;
                         case 'Room III':
-                            curI = fon[2]
-                            break
+                            createBackground(globalVal.backgrounds[2], scene, globalVal.parametersForPlane)
+                            break;
                     }
-                    lastFon = curI
-                    document.getElementById('main').appendChild(curI)
+
+                    // document.getElementById('main').removeChild(lastFon)
+                    // var curI
+                    // switch (val) {
+                    //     case 'Room I':
+                    //         curI = fon[0]
+                    //         break
+                    //     case 'Room II':
+                    //         curI = fon[1]
+                    //         break
+                    //     case 'Room III':
+                    //         curI = fon[2]
+                    //         break
+                    // }
+                    // lastFon = curI
+                    // // document.getElementById('main').appendChild(curI)
                 })
         }
         if(currentDB[8].checked === "0") {
@@ -956,7 +1000,7 @@ var Apps = function () {
                 isTimeGenerate: () => {},
                 color: 0xa9b3b3,
                 radiousSize: 3,
-                radiousTimer: 5,
+                radiousTimer: 8,
                 countPoints: 20,
                 firstSize: () => {},
                 secondSize: () => {},
@@ -999,10 +1043,19 @@ var Apps = function () {
             camera.rotation.x = 1.61
             camera.rotation.y = 1.55
             camera.rotation.z = -1.57
+
+            const textureLoader = new THREE.TextureLoader()
+            const backForPlane = [
+                textureLoader.load('img/FON_1.jpg' ),
+                textureLoader.load( 'img/FON_2.jpg' ),
+                textureLoader.load( 'img/FON_3.jpg' )
+            ]
+
             /*
              * lights
              * */
-            var ambiLight = new THREE.AmbientLight(0x111111)
+            var ambiLight = new THREE.AmbientLight(0xfffffff)
+            ambiLight.intensity = .2
             scene.add(ambiLight)
             spotLight = new THREE.SpotLight(0xffffff)
             spotLight.position.set(300, 1000, 100)
@@ -1014,21 +1067,32 @@ var Apps = function () {
             spotLight.shadowCameraVisible = false
             scene.add(spotLight)
 
+            const parametersForPlane = {
+                position: camera.position,
+                quaternion: camera.quaternion,
+                rotation: camera.rotation,
+                scaleForPlane: 1000
+            }
+
+            globalVal.backgrounds = backForPlane
+            globalVal.parametersForPlane = parametersForPlane
+
+            createBackground(backForPlane[0], scene, parametersForPlane)
+
+            const spotLightForShadow = new THREE.SpotLight(0xffffff, 0.3, 35600, Math.PI * 0.3),
+                spotLightForShadowTarget = spotLightForShadow.target
+            spotLightForShadow.castShadow = true
+            spotLightForShadow.position.set(parametersForPlane.position.x - 100 , parametersForPlane.position.y + 600, parametersForPlane.position.z - 1200 )
+            spotLightForShadow.shadow.mapSize.width = 5024;
+            spotLightForShadow.shadow.mapSize.height = 5024;
+            // spotLightForShadow.intensity = 0.3
+            spotLightForShadow.shadow.camera.near = 500;
+            spotLightForShadow.shadow.camera.far = 2500;
+            spotLightForShadow.shadow.camera.fov = 40;
+            scene.add(spotLightForShadow)
+            scene.add(spotLightForShadowTarget)
+
             generateCurve(true, globalVal.size)
-            //start!!!
-            /*
-             * floor
-             * */
-            var geometry = new THREE.BoxGeometry(5, 10, 0.2)
-            THREE.ShaderLib['basic'].fragmentShader = basicFragmentShader(false)
-            var material = new THREE.MeshBasicMaterial()
-            var ground = new THREE.Mesh(geometry, material)
-            ground.scale.multiplyScalar(250)
-            ground.position.y = -200
-            ground.position.x = -50
-            ground.rotation.x = Math.PI / 2
-            ground.receiveShadow = true
-            scene.add(ground)
 
             renderer = new THREE.WebGLRenderer({
                 antialias: true,
@@ -1071,6 +1135,24 @@ var Apps = function () {
 
             $('.container-loader').fadeOut()
         }
+
+        function createBackground(background, scene, parameters) {
+            if(planeMesh !== null) {
+                scene.remove(planeMesh)
+            }
+            planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
+            planeMaterial = new THREE.MeshPhongMaterial({map: background})
+            planeMesh = new THREE.Mesh(planeGeometry, planeMaterial)
+            planeMesh.position.set(parameters.position.x - 1050, parameters.position.y + 20, parameters.position.z)
+            planeMesh.rotation.set(parameters.rotation.x, parameters.rotation.y, parameters.rotation.z)
+            planeMesh.scale.set(parameters.scaleForPlane * 1.5, parameters.scaleForPlane, 1)
+            planeMesh.receiveShadow = true
+            planeMesh.castShadow = false
+            planeMesh.name = 'Plane'
+            scene.add(planeMesh)
+            console.log(scene.children)
+
+        }
     } catch (e) {}
 
     function onWindowResize() {
@@ -1105,7 +1187,6 @@ var Apps = function () {
         const yOffset = 150
 
         const startPoint = new THREE.Vector3(0, -yOffset / 2, 0)
-        // const startPoint = new THREE.Vector3( 0, -yOffset/2, 0 );
 
         const max = 0.4,
             min = 0.2
@@ -1208,8 +1289,6 @@ var Apps = function () {
             newTestSpecial.getGeometry(true, newPoints)
             group = newTestSpecial.obj
 
-            // console.log(group.children[0].geometry)
-
             group.remove = () => {
                 newTestSpecial.remove()
             }
@@ -1262,14 +1341,26 @@ var Apps = function () {
             targetRotationOnMouseDown + (mouseX - mouseXOnMouseDown) * 0.02
 
         clearInterval(interval)
-        if (globalVal.isTimeGenerate === true) {
-            globalVal.isTimeGenerate = false
-            createGuiMenu(
-                globalVal.isTimeGenerate,
-                globalVal.renderObj,
-                globalVal.guiMenuIsCreate
-            )
-        }
+        // if(globalVal.db[0].checked === "0") {
+        //     if (globalVal.isTimeGenerate === false) {
+        //         globalVal.isTimeGenerate = true
+        //         createGuiMenu(
+        //             globalVal.isTimeGenerate,
+        //             globalVal.renderObj,
+        //             globalVal.guiMenuIsCreate
+        //         )
+        //     }
+        // } else if(globalVal.db[0].checked === "1") {
+        //     if (globalVal.isTimeGenerate === true) {
+        //         globalVal.isTimeGenerate = false
+        //         createGuiMenu(
+        //             globalVal.isTimeGenerate,
+        //             globalVal.renderObj,
+        //             globalVal.guiMenuIsCreate
+        //         )
+        //     }
+        // }
+
     }
 
     function onDocumentMouseUp(event) {

@@ -11,4 +11,7 @@ if($login === $_POST['login'] && $password === $_POST['password']) {
    $_SESSION['password'] = $_POST['password'];
 
    header('Location: /sculpture(pash)/admin/content.php');
-} 
+}  else {
+    header('Location: /sculpture(pash)/admin');
+
+}
